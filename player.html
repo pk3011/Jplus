@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Live Stream - Shaka Player</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Shaka Player -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.6.0/shaka-player.compiled.js"></script>
+  <style>
+    body {
+      margin: 0;
+      background-color: black;
+    }
+
+    #video {
+      width: 100%;
+      height: 100vh;
+      object-fit: contain;
+      background-color: black;
+    }
+  </style>
+</head>
+
+<body>
+  <video id="video" autoplay controls></video>
+
+  <script>
+    // Helper: Get URL parameter
+    function getParameterByName(name, url = window.location.href) {
+      name = name.replace(/[\[\]]/g, "\\$&");
+      const regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)");
+      const results = regex.exec(url);
+      if (!results) return null;
+      return decodeURIComponent(results[2].replace(/\+/g, " ")) || null;
+    }
+
+    // Setup Shaka Player
+    async function setupPlayer(channelData) {
+      const video = document.getElementById('video');
+      const player = new shaka.Player(video);
+
+      // Error handling
+      player.addEventListener('error', e => {
+        console.error('Shaka error', e.detail);
+      });
+
+      // Configure DRM if available
+      if (channelData.keyid && channelData.key) {
+        const keys = {};
+        keys[channelData.keyid] = channelData.key;
+
+        player.configure({
+          drm: {
+            clearKeys: keys
+          }
+        });
+      }
+
+      // Load the MPD stream
+      try {
+        await player.load(channelData.dashWidewinePlayUrl);
+        console.log('Video loaded successfully!');
+      } catch (error) {
+        console.error('Error loading video:', error);
+      }
+    }
+
+    // Fetch channel JSON and load selected ID
+    fetch("https://fftv.in/jpls/jtvv.json")
+      .then(res => res.json())
+      .then(data => {
+        const id = getParameterByName("id");
+        if (!id || !data[id]) {
+          console.error("Invalid or missing channel ID");
+          return;
+        }
+
+        const channelData = data[id];
+        setupPlayer(channelData);
+      })
+      .catch(err => {
+        console.error("Failed to fetch channel JSON:", err);
+      });
+  </script>
+</body>
+
+</html>
